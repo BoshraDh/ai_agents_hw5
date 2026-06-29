@@ -34,7 +34,7 @@ class ProAgent(BaseAgent):
         self,
         config: ConfigManager,
         gatekeeper: ApiGatekeeper,
-        bus: MessageBus,
+        bus: MessageBus | None = None,
         round_number: int = 1,
         prev_con_msg: DebateMessage | None = None,
     ) -> None:

@@ -48,6 +48,7 @@ def config(tmp_path: Path) -> ConfigManager:
         "rate_limits": {"requests_per_minute": 60, "requests_per_hour": 1000, "concurrent_max": 5},
         "retry": {"max_retries": 2, "retry_backoff_seconds": 0.1, "retry_on_status_codes": [429]},
         "budget": {"budget_usd": 10.0, "alert_at_usd": 5.0},
+        "cost_per_million_tokens": {"input": 0.25, "output": 1.25},
     }
     logging_cfg = {
         "version": "1.00",

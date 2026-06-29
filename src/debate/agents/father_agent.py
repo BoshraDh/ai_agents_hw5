@@ -30,13 +30,15 @@ class FatherAgent(BaseAgent):
         self,
         config: ConfigManager,
         gatekeeper: ApiGatekeeper,
-        bus: MessageBus,
+        bus: MessageBus | None = None,
     ) -> None:
         super().__init__(AgentRole.FATHER, config, gatekeeper)
         self._bus = bus
 
     def route(self, message: DebateMessage) -> None:
-        """Forward a message to the appropriate agent queue."""
+        """Forward a message to the appropriate agent queue (bus mode only)."""
+        if self._bus is None:
+            return  # In process mode routing is handled by DebateOrchestrator
         if message.to_agent == AgentRole.PRO:
             self._bus.send_to_pro(message)
         elif message.to_agent == AgentRole.CON:

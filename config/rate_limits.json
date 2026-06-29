@@ -13,5 +13,9 @@
   "budget": {
     "budget_usd": 5.0,
     "alert_at_usd": 3.0
+  },
+  "cost_per_million_tokens": {
+    "input": 0.25,
+    "output": 1.25
   }
 }

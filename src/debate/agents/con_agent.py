@@ -34,7 +34,7 @@ class ConAgent(BaseAgent):
         self,
         config: ConfigManager,
         gatekeeper: ApiGatekeeper,
-        bus: MessageBus,
+        bus: MessageBus | None = None,
     ) -> None:
         super().__init__(AgentRole.CON, config, gatekeeper)
         self._bus = bus

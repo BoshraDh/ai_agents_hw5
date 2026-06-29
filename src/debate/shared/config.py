@@ -79,6 +79,16 @@ class ConfigManager:
         return int(self._rate_limits["rate_limits"]["requests_per_minute"])
 
     @property
+    def requests_per_hour(self) -> int:
+        """GAP-6: RPH ceiling, previously unread from config."""
+        return int(self._rate_limits["rate_limits"]["requests_per_hour"])
+
+    @property
+    def concurrent_max(self) -> int:
+        """GAP-5: max simultaneous in-flight API calls."""
+        return int(self._rate_limits["rate_limits"]["concurrent_max"])
+
+    @property
     def max_retries(self) -> int:
         return int(self._rate_limits["retry"]["max_retries"])
 
@@ -89,6 +99,21 @@ class ConfigManager:
     @property
     def budget_usd(self) -> float:
         return float(self._rate_limits["budget"]["budget_usd"])
+
+    @property
+    def alert_at_usd(self) -> float:
+        """GAP-8: budget alert threshold before hitting the ceiling."""
+        return float(self._rate_limits["budget"]["alert_at_usd"])
+
+    @property
+    def input_cost_per_million(self) -> float:
+        """GAP-9: per-million input token cost, read from config (not hardcoded)."""
+        return float(self._rate_limits["cost_per_million_tokens"]["input"])
+
+    @property
+    def output_cost_per_million(self) -> float:
+        """GAP-9: per-million output token cost, read from config (not hardcoded)."""
+        return float(self._rate_limits["cost_per_million_tokens"]["output"])
 
     # --- Logging settings ---
 

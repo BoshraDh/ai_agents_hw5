@@ -1,4 +1,4 @@
-"""Watchdog — background thread that monitors agent processes and restarts crashed ones."""
+"""Watchdog — monitors agent processes and signals main thread on unrecoverable crash."""
 
 from __future__ import annotations
 
@@ -25,7 +25,13 @@ class _ProcessEntry:
 
 
 class Watchdog(threading.Thread):
-    """Monitors registered agent processes; auto-restarts on crash."""
+    """Monitors registered agent processes; auto-restarts on crash.
+
+    GAP-3: ProcessUnrecoverableException is no longer raised inside run()
+    (which would be silently swallowed in a daemon thread). Instead, it is
+    stored and signalled via _error_event. The main thread calls
+    check_for_fatal_error() between rounds to propagate it.
+    """
 
     def __init__(self, config: ConfigManager, logger: DebateLogger) -> None:
         super().__init__(daemon=True, name="Watchdog")
@@ -33,6 +39,9 @@ class Watchdog(threading.Thread):
         self._logger = logger
         self._entries: list[_ProcessEntry] = []
         self._running = False
+        # GAP-3: error signalling instead of raising in daemon thread
+        self._error_event = threading.Event()
+        self._fatal_error: ProcessUnrecoverableException | None = None
 
     def register(
         self,
@@ -49,7 +58,7 @@ class Watchdog(threading.Thread):
         super().start()
 
     def stop(self) -> None:
-        """Signal the monitoring loop to exit."""
+        """Signal the monitoring loop to exit cleanly."""
         self._running = False
 
     def get_status(self) -> dict[str, str]:
@@ -59,8 +68,13 @@ class Watchdog(threading.Thread):
             for e in self._entries
         }
 
+    def check_for_fatal_error(self) -> None:
+        """GAP-3: call from main thread between rounds to propagate Watchdog errors."""
+        if self._error_event.is_set() and self._fatal_error is not None:
+            raise self._fatal_error
+
     def run(self) -> None:
-        """Main monitoring loop — runs every heartbeat_interval seconds."""
+        """Main monitoring loop — polls every heartbeat_interval seconds."""
         while self._running:
             for entry in self._entries:
                 if not entry.process.is_alive():
@@ -76,9 +90,12 @@ class Watchdog(threading.Thread):
         )
         if entry.restart_count > self._config.max_restarts:
             self._running = False
-            raise ProcessUnrecoverableException(
+            # GAP-3: signal via event instead of raising inside daemon thread
+            self._fatal_error = ProcessUnrecoverableException(
                 f"{entry.role.value} crashed {entry.restart_count} times — aborting"
             )
+            self._error_event.set()
+            return
         new_process = entry.factory()
         entry.process = new_process
         new_process.start()

@@ -162,8 +162,13 @@ Orchestrator        Pro             Father          Con
 |---|---|---|
 | IPC mechanism | `multiprocessing.Queue` | Thread-safe, no file I/O, built-in Python |
 | Message format | JSON (`DebateMessage`) | Structured, monitorable, token-efficient |
-| Process model | 3 × `multiprocessing.Process` | Isolation — one stuck agent cannot block others |
+| Process model | 3 × `multiprocessing.Process` via `agent_workers.py` | Isolation — one stuck agent cannot block others |
+| Worker functions | Module-level in `agent_workers.py` | Required for Windows spawn picklability |
+| Process mode | `use_processes=True` (prod) / `False` (tests) | Tests mock `_call_llm` on in-process agents |
 | Watchdog | `threading.Thread` | Lightweight; only checks `process.is_alive()` |
+| Watchdog error propagation | `threading.Event` + `check_for_fatal_error()` | Daemon thread exceptions are silently swallowed; event allows main thread to raise |
+| Gatekeeper FIFO queue | `deque[threading.Event]` + dispatcher thread | True FIFO ordering; tickets admitted in arrival order |
+| Gatekeeper concurrency cap | `threading.Semaphore(concurrent_max)` | Hard cap on simultaneous in-flight API calls |
 
 ---
 
@@ -240,6 +245,9 @@ class DebateSDK:
         """Gracefully stop the debate and all processes."""
 ```
 
+Session store: `_sessions: dict[str, DebateOrchestrator]` ensures `get_transcript` /
+`get_verdict` return correct data when multiple debates have been run.
+
 The CLI imports **only** `DebateSDK`. All other modules are internal.
 
 ---
@@ -251,6 +259,6 @@ Every source file must stay ≤ 150 lines. Split strategy:
 | If file grows over 150 lines | Split by |
 |---|---|
 | `base_agent.py` | Extract `_timeout_wrapper.py` mixin |
-| `debate_orchestrator.py` | Extract `round_manager.py` |
+| `debate_orchestrator.py` | Extract `agent_workers.py` (done — process entry functions live there) |
 | `gatekeeper.py` | Extract `queue_manager.py` |
 | `messages.py` | Extract `verdict_model.py` |
