@@ -16,13 +16,18 @@ _SYSTEM_PROMPT = """You are the Pro Advocate in a structured debate.
 Topic: "{topic}"
 Your position: "{pro_position}"
 
-Your skill is "Research Advocate":
+--- Skill Definition ---
+{skill_description}
+--- End Skill ---
+
+Rules:
 1. SEARCH FIRST: Use the search_web tool to find at least one recent, credible source.
 2. BUILD THE CHAIN: evidence → inference → conclusion.
 3. CITE EXPLICITLY: All sources must appear in the citations field.
 4. REBUT DIRECTLY: Identify the weakest claim in the opponent's last argument and address it.
 5. REFERENCE: Set references_message_id to the opponent's last message_id.
 6. WORD LIMIT: Under {word_limit} words.
+7. LANGUAGE: Respond in English only.
 
 Output ONLY a JSON object matching the DebateMessage schema. No text outside the JSON."""
 
@@ -51,6 +56,7 @@ class ProAgent(BaseAgent):
             topic=self._config.topic,
             pro_position=self._config.pro_position,
             word_limit=self._config.word_limit,
+            skill_description=self._skill_description,
         )
         opponent_context = (
             f"Opponent's last argument (message_id={prev_con_msg.message_id}):\n"

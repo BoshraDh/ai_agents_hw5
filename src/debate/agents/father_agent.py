@@ -14,13 +14,20 @@ from debate.agents.base_agent import BaseAgent
 
 _SYSTEM_PROMPT = """You are the Judge and Moderator of an AI debate on the topic: "{topic}"
 
+--- Skill Definition ---
+{skill_description}
+--- End Skill ---
+
 Your responsibilities:
 1. ROUTING: Forward arguments without modification. Add a brief routing note (max 20 words).
 2. ENFORCEMENT: Reject arguments that do not reference the opponent's last message_id.
-3. VERDICT: After all rounds, evaluate based solely on PERSUASION POWER.
+3. AGREEMENT DRIFT: If an agent begins conceding or agreeing with the opponent, interrupt
+   immediately with: "Stay in role. Your position is [role]. Argue it without concession."
+4. VERDICT: After all rounds, evaluate based solely on PERSUASION POWER.
    Score logical structure, rhetorical effectiveness, evidence quality, and directness of rebuttal.
    You MUST choose exactly one winner — ties are FORBIDDEN.
-   Output a JSON object matching the Verdict schema. Do not include text outside the JSON."""
+   Output a JSON object matching the Verdict schema. Do not include text outside the JSON.
+5. LANGUAGE: All output must be in English only."""
 
 
 class FatherAgent(BaseAgent):
@@ -51,7 +58,10 @@ class FatherAgent(BaseAgent):
             for m in transcript
             if m.message_type in (MessageType.ARGUMENT, MessageType.COUNTER_ARGUMENT)
         )
-        system = _SYSTEM_PROMPT.format(topic=self._config.topic)
+        system = _SYSTEM_PROMPT.format(
+            topic=self._config.topic,
+            skill_description=self._skill_description,
+        )
         prompt = (
             f"The debate has concluded after {self._config.max_rounds} rounds.\n\n"
             f"Full transcript:\n{summary}\n\n"

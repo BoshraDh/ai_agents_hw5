@@ -5,6 +5,7 @@ from __future__ import annotations
 import os
 from abc import ABC, abstractmethod
 from concurrent.futures import ThreadPoolExecutor, TimeoutError as FuturesTimeoutError
+from pathlib import Path
 
 import anthropic
 
@@ -13,6 +14,13 @@ from debate.models.messages import Citation, DebateMessage
 from debate.shared.config import ConfigManager
 from debate.shared.gatekeeper import ApiGatekeeper
 from debate.tools.search_tool import SEARCH_TOOL_DEFINITION, SearchTool
+
+_SKILL_FILES: dict[AgentRole, str] = {
+    AgentRole.FATHER: "father_skill.md",
+    AgentRole.PRO: "pro_skill.md",
+    AgentRole.CON: "con_skill.md",
+}
+_SKILLS_DIR = Path(__file__).parent / "skills"
 
 
 class BaseAgent(ABC):
@@ -32,6 +40,14 @@ class BaseAgent(ABC):
             api_key=os.environ.get("ANTHROPIC_API_KEY", "")
         )
         self._model = self._resolve_model()
+        self._skill_description: str = self._load_skill()
+
+    def _load_skill(self) -> str:
+        """Load the agent's Skill definition from its skill.md file."""
+        skill_file = _SKILLS_DIR / _SKILL_FILES.get(self.role, "")
+        if skill_file.exists():
+            return skill_file.read_text(encoding="utf-8").strip()
+        return ""
 
     def _resolve_model(self) -> str:
         if self.role == AgentRole.FATHER:

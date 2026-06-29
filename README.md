@@ -166,6 +166,7 @@ ai_agents_hw5/
 │   ├── PRD.md                         # Product Requirements Document
 │   ├── PLAN.md                        # Architecture & technical planning
 │   ├── TODO.md                        # Task tracking
+│   ├── CLASS_DIAGRAM.md               # Class hierarchy & relationships (§8.6)
 │   ├── PRD_debate_engine.md           # PRD: debate orchestration mechanism
 │   ├── PRD_gatekeeper.md              # PRD: API Gatekeeper
 │   ├── PRD_watchdog.md                # PRD: Watchdog process monitor
@@ -241,7 +242,7 @@ ai_agents_hw5/
 | Feature | Implementation |
 |---|---|
 | **SDK Layer** | All logic accessible only via `DebateSDK` |
-| **OOP + Inheritance** | `BaseAgent → FatherAgent / ProAgent / ConAgent` |
+| **OOP + Inheritance** | `BaseAgent → FatherAgent / ProAgent / ConAgent` (see `docs/CLASS_DIAGRAM.md`) |
 | **API Gatekeeper** | `shared/gatekeeper.py` — rate limit + FIFO queue + retry |
 | **Watchdog** | `orchestrator/watchdog.py` — heartbeat monitor + auto-restart |
 | **Timeouts** | Every LLM call wrapped in `ThreadPoolExecutor` with timeout |

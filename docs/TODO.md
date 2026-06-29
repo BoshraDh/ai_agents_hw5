@@ -64,7 +64,8 @@ Status values: `[ ]` Not Started | `[~]` In Progress | `[x]` Done
 
 ## Phase 4 — Agent Layer (TDD)
 
-- [x] Write `tests/unit/test_agents/test_base_agent.py`
+- [x] Write `tests/unit/test_agents/test_base_agent.py` — created; verifies skill loading, skill distinctness, and LLM timeout
+- [x] **[GAP-A]** ✅ `BaseAgent._load_skill()` reads each agent's `skill.md` file at construction; `_skill_description` injected into all three system prompts
 - [x] Implement `src/debate/agents/base_agent.py` (`BaseAgent` ABC)
 - [x] Create `src/debate/agents/skills/father_skill.md`
 - [x] Create `src/debate/agents/skills/pro_skill.md`
@@ -96,7 +97,7 @@ Status values: `[ ]` Not Started | `[~]` In Progress | `[x]` Done
 
 - [x] **[GAP-10]** ✅ `DebateSDK` now stores orchestrators in `_sessions: dict[str, DebateOrchestrator]`; `get_transcript(session_id)` and `get_verdict(session_id)` look up by actual session_id
 - [x] Implement `src/debate/sdk/sdk.py` (`DebateSDK`)
-- [ ] Write `tests/unit/test_sdk.py`
+- [x] **[GAP-F]** ✅ Write `tests/unit/test_sdk.py` — tests start_debate, get_transcript, get_verdict, get_status, unknown session
 - [x] Implement `src/debate/cli/menu.py` (terminal menu)
 - [x] Implement `src/main.py` — added `multiprocessing.freeze_support()` and `if __name__ == '__main__':` guard (required for Windows spawn method)
 
@@ -131,7 +132,11 @@ Status values: `[ ]` Not Started | `[~]` In Progress | `[x]` Done
 - [ ] Take terminal screenshots → `assets/screenshots/`
 - [ ] Add screenshots to `README.md`
 - [ ] Add Session 1 transcript excerpt to `README.md`
-- [ ] Create architecture diagram → `assets/architecture_diagram.png`
+- [x] **[GAP-B]** ✅ Create architecture class diagram → `docs/CLASS_DIAGRAM.md` (Mermaid + ASCII; satisfies §8.6 requirement)
+- [x] **[GAP-C]** ✅ Add `LANGUAGE: Respond in English only.` to all three agent system prompts (§8.7 requires English/Hebrew)
+- [x] **[GAP-G]** ✅ Add agreement-drift intervention rule to Father's system prompt (§9 class note requirement)
+- [ ] Take terminal screenshots → `assets/screenshots/` and add to README
+- [ ] Add Session 1 transcript excerpt to `README.md`
 - [ ] Final push to GitHub (public repository)
 - [ ] Submit GitHub repo link to Moodle
 

@@ -16,13 +16,18 @@ _SYSTEM_PROMPT = """You are the Con Advocate in a structured debate.
 Topic: "{topic}"
 Your position: "{con_position}"
 
-Your skill is "Devil's Advocate":
+--- Skill Definition ---
+{skill_description}
+--- End Skill ---
+
+Rules:
 1. FIND THE EXCEPTION: Use search_web to find a counter-example or contradicting study.
-2. REDUCTIO AD ABSURDUM: Show how the Pro's argument leads to an absurd conclusion if taken to extremes.
+2. REDUCTIO AD ABSURDUM: Show how Pro's argument leads to an absurd conclusion at extremes.
 3. CONTRADICT THE SOURCE: Find a source that supersedes or contradicts what Pro cited.
 4. CITE EXPLICITLY: All sources must appear in the citations field.
 5. REFERENCE: Set references_message_id to the Pro's last message_id.
 6. WORD LIMIT: Under {word_limit} words.
+7. LANGUAGE: Respond in English only.
 
 Output ONLY a JSON object matching the DebateMessage schema. No text outside the JSON."""
 
@@ -47,6 +52,7 @@ class ConAgent(BaseAgent):
             topic=self._config.topic,
             con_position=self._config.con_position,
             word_limit=self._config.word_limit,
+            skill_description=self._skill_description,
         )
         user_msg = (
             f"Round {round_number} of {self._config.max_rounds}.\n"
