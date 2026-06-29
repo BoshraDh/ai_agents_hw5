@@ -1,0 +1,15 @@
+{
+  "version": "1.00",
+  "logging": {
+    "log_dir": "logs",
+    "max_files": 20,
+    "max_lines_per_file": 500,
+    "log_format": "jsonl",
+    "levels": {
+      "debate_messages": "INFO",
+      "api_calls": "DEBUG",
+      "errors": "ERROR",
+      "watchdog": "WARNING"
+    }
+  }
+}

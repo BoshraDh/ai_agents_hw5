@@ -1,0 +1,17 @@
+{
+  "version": "1.00",
+  "rate_limits": {
+    "requests_per_minute": 30,
+    "requests_per_hour": 500,
+    "concurrent_max": 3
+  },
+  "retry": {
+    "max_retries": 3,
+    "retry_backoff_seconds": 2.0,
+    "retry_on_status_codes": [429, 503, 500]
+  },
+  "budget": {
+    "budget_usd": 5.0,
+    "alert_at_usd": 3.0
+  }
+}

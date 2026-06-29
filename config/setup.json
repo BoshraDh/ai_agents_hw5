@@ -1,0 +1,25 @@
+{
+  "version": "1.00",
+  "debate": {
+    "topic": "Is AI a threat or a benefit to humanity?",
+    "pro_position": "AI is primarily a benefit to humanity",
+    "con_position": "AI poses serious threats to humanity",
+    "max_rounds": 5,
+    "word_limit_per_response": 200
+  },
+  "agents": {
+    "father_model": "claude-sonnet-4-6",
+    "pro_model": "claude-haiku-4-5-20251001",
+    "con_model": "claude-haiku-4-5-20251001",
+    "max_tokens_per_response": 1024
+  },
+  "timeouts": {
+    "llm_call_seconds": 60,
+    "round_timeout_seconds": 180,
+    "heartbeat_interval_seconds": 10,
+    "heartbeat_timeout_seconds": 30
+  },
+  "watchdog": {
+    "max_restarts_per_process": 3
+  }
+}
