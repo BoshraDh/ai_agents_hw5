@@ -43,12 +43,19 @@ Status values: `[ ]` Not Started | `[~]` In Progress | `[x]` Done
 ### Shared Utilities
 - [ ] Write `tests/unit/test_shared/test_config.py`
 - [ ] Implement `src/debate/shared/config.py` (`ConfigManager`)
+- [ ] **[GAP-5/6]** Add `requests_per_hour` and `concurrent_max` properties to `ConfigManager` — both values exist in `rate_limits.json` but have no properties and are silently ignored
 - [ ] Write `tests/unit/test_shared/test_message_bus.py`
 - [ ] Implement `src/debate/shared/message_bus.py` (`MessageBus`)
 - [ ] Write `tests/unit/test_shared/test_logger.py`
 - [ ] Implement `src/debate/shared/logger.py` (`DebateLogger`, FIFO rotation)
 - [ ] Write `tests/unit/test_shared/test_gatekeeper.py`
 - [ ] Implement `src/debate/shared/gatekeeper.py` (`ApiGatekeeper`)
+- [ ] **[GAP-4] CRITICAL** Replace sleep-based rate limiting in `ApiGatekeeper._enforce_rate_limit()` with a real FIFO queue (e.g., `queue.Queue` + `threading.Semaphore`) so concurrent waiters are dispatched in arrival order (FR-G02/G03)
+- [ ] **[GAP-5] CRITICAL** Add `concurrent_max` semaphore to `ApiGatekeeper` to cap simultaneous in-flight API calls (PRD-G: "Limit simultaneous in-flight calls to `concurrent_max`")
+- [ ] **[GAP-6]** Add `requests_per_hour` window tracking to `ApiGatekeeper` (config value `requests_per_hour` is currently dead)
+- [ ] **[GAP-7]** Implement `RateLimitQueueFullException` and raise it if FIFO queue exceeds a hard cap (defined in PRD_gatekeeper.md but missing from code)
+- [ ] **[GAP-8]** Implement `alert_at_usd` budget warning in `ApiGatekeeper._track_cost()` — log a WARNING when spend crosses `alert_at_usd` (config value exists, code ignores it)
+- [ ] **[GAP-9]** Move hardcoded cost rates in `gatekeeper.py:76` (`0.25`, `1.25`) to `config/rate_limits.json` — violates the no-hardcoded-values rule (NFR)
 - [ ] Implement `src/debate/shared/version.py`
 - [ ] Implement `src/debate/constants.py`
 
@@ -78,14 +85,19 @@ Status values: `[ ]` Not Started | `[~]` In Progress | `[x]` Done
 
 - [ ] Write `tests/unit/test_orchestrator/test_watchdog.py`
 - [ ] Implement `src/debate/orchestrator/watchdog.py` (`Watchdog`)
+- [ ] **[GAP-3]** Fix `ProcessUnrecoverableException` propagation: daemon thread must signal main thread via `threading.Event` or a shared `queue.Queue` — raising inside `run()` is silently swallowed
 - [ ] Write `tests/unit/test_orchestrator/test_debate_orchestrator.py`
 - [ ] Implement `src/debate/orchestrator/debate_orchestrator.py` (`DebateOrchestrator`)
+- [ ] **[GAP-1] CRITICAL** Refactor `DebateOrchestrator` to spawn each agent as `multiprocessing.Process` (FR-E01). Currently agents are plain in-process objects — this violates the assignment's core architecture requirement.
+- [ ] **[GAP-2] CRITICAL** Wire `Watchdog` into `DebateOrchestrator`: import Watchdog, create instance, register all 3 processes with their factory callables, call `watchdog.start()` before rounds begin, call `watchdog.stop()` on exit
+- [ ] **[GAP-11]** Add `stop()` method and `get_session_id()` method to `DebateOrchestrator` to match PRD-E interface definition
 
 ---
 
 ## Phase 6 — SDK + CLI
 
 - [ ] Implement `src/debate/sdk/sdk.py` (`DebateSDK`)
+- [ ] **[GAP-10]** Fix `get_transcript(session_id)` and `get_verdict(session_id)` in `DebateSDK` to actually honor `session_id` — currently the parameter is accepted but ignored; querying an old session returns the latest session's data instead
 - [ ] Write `tests/unit/test_sdk.py`
 - [ ] Implement `src/debate/cli/menu.py` (terminal menu)
 - [ ] Implement `src/main.py` (entry point)
@@ -97,6 +109,10 @@ Status values: `[ ]` Not Started | `[~]` In Progress | `[x]` Done
 - [ ] Write `tests/integration/test_debate_flow.py`
 - [ ] Write `tests/conftest.py` (shared fixtures + mocks)
 - [ ] Run full integration test with mocked Anthropic API
+- [ ] **[GAP TEST-1]** Add `test_gatekeeper_fifo_ordering`: launch N concurrent threads all hitting `execute()` at once; verify they are dispatched in arrival order when rate-limited
+- [ ] **[GAP TEST-2]** Add `test_gatekeeper_concurrent_max`: verify no more than `concurrent_max` calls run simultaneously (requires semaphore to be implemented first)
+- [ ] **[GAP TEST-3]** Add `test_orchestrator_watchdog_integration`: spawn a real process that intentionally crashes; verify Watchdog detects it, restarts it, and the main thread is notified if max restarts exceeded
+- [ ] **[GAP TEST-4]** Add `test_sdk_session_isolation`: run two debates, store both session_ids, verify that querying session A after running session B returns session A's data (not B's)
 
 ---
 
