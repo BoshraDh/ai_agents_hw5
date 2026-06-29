@@ -2,7 +2,7 @@
 
 **Project**: AI Agent Debate System  
 **Version**: 1.00  
-**Date**: 2026-06-29
+**Date**: 2026-06-30
 
 ---
 
@@ -65,23 +65,24 @@
 
 ```
 BaseAgent (ABC)
-├── Properties: role, config, gatekeeper, message_bus, search_tool
+├── Properties: role, config, gatekeeper, search_tool, _skill_description
 ├── Methods:
-│   ├── _call_llm(prompt, tools) → str        [routes through Gatekeeper]
-│   ├── _search_web(query) → list[Citation]   [mandatory per argument]
-│   ├── _validate_response(msg)               [checks JSON schema]
-│   └── _build_system_prompt() → str          [loads from PROMPTS.md section]
+│   ├── _load_skill() → str                   [reads agents/skills/<role>_skill.md]
+│   ├── _call_api_once(system, messages, tools) → Any   [single API call + timeout]
+│   ├── _call_llm(system, messages, use_search) → tuple[str, list[Citation]]
+│   │       loops: tool_use → execute → tool_result → second API call → text
+│   ├── _validate_message(msg)                [raises ValueError on empty content]
+│   └── run() → None  [abstract — subprocess entry point]
 │
 ├── FatherAgent(BaseAgent)
-│   ├── route(message, target_queue) → None
-│   ├── evaluate_debate(transcript) → Verdict
-│   └── is_round_complete(round_n) → bool
+│   ├── route(message, queue) → None          [no-op when bus=None]
+│   └── evaluate_debate(transcript) → Verdict [parses JSON verdict from LLM]
 │
 ├── ProAgent(BaseAgent)
-│   └── generate_argument(topic, prev_con_msg) → DebateMessage
+│   └── generate_argument(round_number, prev_con_msg) → DebateMessage
 │
 └── ConAgent(BaseAgent)
-    └── generate_counter(father_forwarded_msg) → DebateMessage
+    └── generate_counter(round_number, pro_msg) → DebateMessage
 ```
 
 ---
@@ -223,6 +224,16 @@ Config version validated on startup.
 **Rationale**: Assignment explicitly allows reducing to 5 with README note; no grade penalty  
 **Trade-off**: Shorter debate; configurable to 10 if budget permits
 
+### ADR-06: Skill files as external Markdown (§6.2)
+**Decision**: Each agent reads its persona/strategy from a `.md` file at construction  
+**Rationale**: Assignment §6.2 requires the Skill architecture pattern; externalising prompts makes them editable without code changes  
+**Trade-off**: Risk of missing file at startup; mitigated by `_load_skill()` returning `""` gracefully and tests verifying all three files exist
+
+### ADR-07: Round execution extracted to `round_runner.py`
+**Decision**: `_round_via_processes` and `_get_verdict_from_father` extracted to `orchestrator/round_runner.py`  
+**Rationale**: `debate_orchestrator.py` exceeded the 150-line limit; splitting by concern keeps both files focused  
+**Trade-off**: An extra module; import graph grows slightly
+
 ---
 
 ## 8. SDK API Contract
@@ -235,14 +246,20 @@ class DebateSDK:
     def get_transcript(self, session_id: str) -> list[dict]:
         """Return all DebateMessages for the session as dicts."""
 
-    def get_verdict(self, session_id: str) -> dict:
-        """Return the Verdict for the session as a dict."""
+    def get_verdict(self, session_id: str) -> dict | None:
+        """Return the Verdict for the session as a dict, or None."""
 
     def get_status(self) -> str:
         """Return current DebateStatus as string."""
 
+    def get_config_summary(self) -> dict:
+        """Return human-readable config: topic, rounds, models, budget."""
+
+    def set_topic(self, topic: str) -> None:
+        """Update the debate topic for the next start_debate() call."""
+
     def stop(self) -> None:
-        """Gracefully stop the debate and all processes."""
+        """Gracefully stop all session orchestrators."""
 ```
 
 Session store: `_sessions: dict[str, DebateOrchestrator]` ensures `get_transcript` /
@@ -252,13 +269,35 @@ The CLI imports **only** `DebateSDK`. All other modules are internal.
 
 ---
 
-## 9. File Size Compliance Plan
+## 9. Skill Architecture (§6.2)
 
-Every source file must stay ≤ 150 lines. Split strategy:
+Each agent loads its Skill definition at construction time from `src/debate/agents/skills/`:
 
-| If file grows over 150 lines | Split by |
-|---|---|
-| `base_agent.py` | Extract `_timeout_wrapper.py` mixin |
-| `debate_orchestrator.py` | Extract `agent_workers.py` (done — process entry functions live there) |
-| `gatekeeper.py` | Extract `queue_manager.py` |
-| `messages.py` | Extract `verdict_model.py` |
+| Agent | Skill file | Key persona |
+|---|---|---|
+| FatherAgent | `father_skill.md` | Impartial Judge — routes, validates, delivers verdict |
+| ProAgent | `pro_skill.md` | Research Advocate — evidence-first + logical chain |
+| ConAgent | `con_skill.md` | Devil's Advocate — reductio ad absurdum + source rebuttal |
+
+`BaseAgent._load_skill()` reads the file and stores it in `self._skill_description`.
+Each subclass injects `{skill_description}` into its system prompt template.
+
+---
+
+## 10. File Size Compliance
+
+Every source file must stay ≤ 150 lines. Current status:
+
+| File | Lines | Status |
+|---|---|---|
+| `base_agent.py` | ~126 | ✅ |
+| `debate_orchestrator.py` | ~108 | ✅ (round logic extracted to `round_runner.py`) |
+| `round_runner.py` | ~61 | ✅ (new — extracted from orchestrator) |
+| `agent_workers.py` | ~80 | ✅ |
+| `gatekeeper.py` | ~141 | ✅ |
+| `config.py` | ~95 | ✅ |
+
+Split rules:
+- `debate_orchestrator.py` → `round_runner.py` already done
+- `base_agent.py` → extract `_timeout_wrapper.py` mixin if it grows past 150
+- `gatekeeper.py` → extract `queue_manager.py` if needed

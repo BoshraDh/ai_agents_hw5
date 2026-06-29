@@ -136,12 +136,17 @@ All parameters are stored in `config/` — no hardcoded values in source code.
   "agents": {
     "father_model": "claude-sonnet-4-6",
     "pro_model": "claude-haiku-4-5-20251001",
-    "con_model": "claude-haiku-4-5-20251001"
+    "con_model": "claude-haiku-4-5-20251001",
+    "max_tokens_per_response": 1024
   },
   "timeouts": {
     "llm_call_seconds": 60,
+    "round_timeout_seconds": 180,
     "heartbeat_interval_seconds": 10,
     "heartbeat_timeout_seconds": 30
+  },
+  "watchdog": {
+    "max_restarts_per_process": 3
   }
 }
 ```
@@ -183,13 +188,19 @@ ai_agents_hw5/
 │       ├── constants.py               # Enums: AgentRole, DebateStatus, MessageType
 │       ├── sdk/sdk.py                 # DebateSDK — single public interface
 │       ├── agents/
-│       │   ├── base_agent.py          # Abstract base class
+│       │   ├── base_agent.py          # Abstract base class (LLM + tool-use cycle + timeout)
 │       │   ├── father_agent.py        # Judge: routes + delivers verdict
 │       │   ├── pro_agent.py           # Pro debater (Research Advocate skill)
-│       │   └── con_agent.py           # Con debater (Devil's Advocate skill)
+│       │   ├── con_agent.py           # Con debater (Devil's Advocate skill)
+│       │   └── skills/
+│       │       ├── father_skill.md    # Father's Skill definition (§6.2)
+│       │       ├── pro_skill.md       # Pro's Skill definition
+│       │       └── con_skill.md       # Con's Skill definition
 │       ├── orchestrator/
 │       │   ├── debate_orchestrator.py # Manages 3 processes + rounds
-│       │   └── watchdog.py            # Heartbeat monitor + restart
+│       │   ├── round_runner.py        # Per-round IPC helpers (extracted for 150-line rule)
+│       │   ├── agent_workers.py       # Module-level subprocess entry functions
+│       │   └── watchdog.py            # Heartbeat monitor + auto-restart
 │       ├── tools/search_tool.py       # DuckDuckGo internet search
 │       ├── models/messages.py         # Pydantic schemas: DebateMessage, Verdict
 │       ├── shared/
@@ -243,14 +254,16 @@ ai_agents_hw5/
 |---|---|
 | **SDK Layer** | All logic accessible only via `DebateSDK` |
 | **OOP + Inheritance** | `BaseAgent → FatherAgent / ProAgent / ConAgent` (see `docs/CLASS_DIAGRAM.md`) |
+| **Skill Architecture (§6.2)** | Each agent loads its `.md` skill file at construction; description injected into system prompt |
 | **API Gatekeeper** | `shared/gatekeeper.py` — rate limit + FIFO queue + retry |
 | **Watchdog** | `orchestrator/watchdog.py` — heartbeat monitor + auto-restart |
-| **Timeouts** | Every LLM call wrapped in `ThreadPoolExecutor` with timeout |
+| **Timeouts** | `ThreadPoolExecutor` + `executor.shutdown(wait=False)` — TimeoutError raised immediately |
+| **Tool-use Cycle** | Full two-turn cycle: LLM calls search → tool_result → second API call → final text |
 | **JSON IPC** | All inter-agent messages are `DebateMessage` Pydantic objects |
 | **Structured Logs** | FIFO rotating JSONL — 20 files × 500 lines (configurable) |
 | **Internet Search** | Anthropic tool_use + DuckDuckGo (mandatory per assignment) |
-| **TDD** | Tests written before code; 85%+ coverage enforced |
-| **Ruff** | Zero linting errors required |
+| **TDD** | Tests written before code; 87% coverage achieved |
+| **Ruff** | Zero linting errors enforced |
 | **UV** | Sole package manager — no pip/venv |
 
 ---

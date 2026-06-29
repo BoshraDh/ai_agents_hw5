@@ -4,7 +4,7 @@
 **Assignment**: Exercise 02 — Lesson 05  
 **Course**: Orchestration for AI Agents | Dr. Yoram Segal  
 **Version**: 1.00  
-**Date**: 2026-06-29
+**Date**: 2026-06-30
 
 ---
 
@@ -85,18 +85,28 @@ by orchestrating three specialized agents with well-defined roles and communicat
 - **FR-17**: Both Pro and Con agents shall use the DuckDuckGo search tool to find citations
 - **FR-18**: The search tool shall be registered as an Anthropic tool_use tool
 - **FR-19**: Citations shall be included in the `DebateMessage.citations` field
+- **FR-20**: When the LLM returns `stop_reason="tool_use"`, the agent shall execute the tool, append a `tool_result` message, and make a second API call to obtain the final text response
 
-### 3.5 Logging
+### 3.5 Skill Architecture (§6.2)
 
-- **FR-20**: All debate messages, API calls, and errors shall be logged in JSONL format
-- **FR-21**: Log files shall rotate using FIFO (max 20 files × 500 lines, configurable)
-- **FR-22**: The full debate transcript shall be saved as a JSONL session file
+- **FR-21**: Each agent shall load its Skill definition from a `skill.md` file at construction time
+- **FR-22**: The Skill description shall be injected into the agent's system prompt via a `{skill_description}` placeholder
+- **FR-23**: Pro, Con, and Father each have a distinct skill file: `pro_skill.md`, `con_skill.md`, `father_skill.md`
+- **FR-24**: All agent system prompts shall specify English-only output
+- **FR-25**: The Father shall interrupt and correct any agent that begins conceding or agreeing with the opponent (agreement-drift intervention)
 
-### 3.6 Terminal Interface
+### 3.6 Logging
 
-- **FR-23**: The system shall provide a keyboard-driven terminal menu
-- **FR-24**: Menu options: start debate, view transcript, view verdict, change topic, show config, exit
-- **FR-25**: The CLI shall call only `DebateSDK` methods — never internal modules directly
+- **FR-26**: All debate messages, API calls, and errors shall be logged in JSONL format
+- **FR-27**: Log files shall rotate using FIFO (max 20 files × 500 lines, configurable)
+- **FR-28**: The full debate transcript shall be saved as a JSONL session file
+
+### 3.7 Terminal Interface
+
+- **FR-29**: The system shall provide a keyboard-driven terminal menu
+- **FR-30**: Menu options: start debate, view transcript, view verdict, change topic, show config, exit
+- **FR-31**: The CLI shall call only `DebateSDK` methods — never internal modules directly
+- **FR-32**: The CLI shall track the last session_id so transcript and verdict options work after a debate
 
 ---
 
