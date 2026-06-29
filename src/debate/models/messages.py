@@ -47,7 +47,7 @@ class DebateMessage(BaseModel):
         return self.model_dump_json()
 
     @classmethod
-    def from_json(cls, data: str) -> "DebateMessage":
+    def from_json(cls, data: str) -> DebateMessage:
         """Deserialize from JSON string."""
         return cls.model_validate_json(data)
 
@@ -78,6 +78,6 @@ class Verdict(BaseModel):
         return self.model_dump_json()
 
     @classmethod
-    def from_json(cls, data: str) -> "Verdict":
+    def from_json(cls, data: str) -> Verdict:
         """Deserialize from JSON string."""
         return cls.model_validate_json(data)

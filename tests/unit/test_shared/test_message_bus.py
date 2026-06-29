@@ -40,3 +40,26 @@ class TestMessageBus:
         bus = MessageBus()
         with pytest.raises(TimeoutError):
             bus.receive_for_pro(timeout=0.1)
+
+    def test_send_to_father_and_receive(self):
+        bus = MessageBus()
+        msg = DebateMessage(
+            from_agent=AgentRole.PRO,
+            to_agent=AgentRole.FATHER,
+            message_type=MessageType.ARGUMENT,
+            round_number=1,
+            content="Pro argument",
+        )
+        bus.send_to_father(msg)
+        received = bus.receive_from_father(timeout=2.0)
+        assert received.message_id == msg.message_id
+
+    def test_receive_from_father_timeout_raises(self):
+        bus = MessageBus()
+        with pytest.raises(TimeoutError):
+            bus.receive_from_father(timeout=0.1)
+
+    def test_receive_for_con_timeout_raises(self):
+        bus = MessageBus()
+        with pytest.raises(TimeoutError):
+            bus.receive_for_con(timeout=0.1)

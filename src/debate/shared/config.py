@@ -28,6 +28,10 @@ class ConfigManager:
     def topic(self) -> str:
         return self._setup["debate"]["topic"]
 
+    def set_topic(self, value: str) -> None:
+        """Update debate topic at runtime (does not write back to disk)."""
+        self._setup["debate"]["topic"] = value
+
     @property
     def pro_position(self) -> str:
         return self._setup["debate"]["pro_position"]
@@ -65,6 +69,11 @@ class ConfigManager:
         return float(self._setup["timeouts"]["llm_call_seconds"])
 
     @property
+    def round_timeout(self) -> float:
+        """Timeout for a full round-trip through the Father process."""
+        return float(self._setup["timeouts"]["round_timeout_seconds"])
+
+    @property
     def heartbeat_interval(self) -> float:
         return float(self._setup["timeouts"]["heartbeat_interval_seconds"])
 
@@ -87,6 +96,11 @@ class ConfigManager:
     def concurrent_max(self) -> int:
         """GAP-5: max simultaneous in-flight API calls."""
         return int(self._rate_limits["rate_limits"]["concurrent_max"])
+
+    @property
+    def max_queue_size(self) -> int:
+        """Hard cap on Gatekeeper admission queue depth."""
+        return int(self._rate_limits["rate_limits"]["max_queue_size"])
 
     @property
     def max_retries(self) -> int:

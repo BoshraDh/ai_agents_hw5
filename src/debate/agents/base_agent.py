@@ -2,10 +2,13 @@
 
 from __future__ import annotations
 
+import json
 import os
 from abc import ABC, abstractmethod
-from concurrent.futures import ThreadPoolExecutor, TimeoutError as FuturesTimeoutError
+from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import TimeoutError as FuturesTimeoutError
 from pathlib import Path
+from typing import Any
 
 import anthropic
 
@@ -56,18 +59,12 @@ class BaseAgent(ABC):
             return self._config.pro_model
         return self._config.con_model
 
-    def _call_llm(
-        self,
-        system: str,
-        messages: list[dict],
-        use_search: bool = False,
-    ) -> tuple[str, list[Citation]]:
-        """Call Anthropic API through Gatekeeper, handle tool_use if needed."""
-        tools = [SEARCH_TOOL_DEFINITION] if use_search else []
-        citations: list[Citation] = []
-
-        def _api_call():
-            kwargs = {
+    def _call_api_once(
+        self, system: str, messages: list[dict], tools: list[dict]
+    ) -> Any:
+        """Single API call with timeout. Raises TimeoutError on deadline."""
+        def _request():
+            kwargs: dict = {
                 "model": self._model,
                 "max_tokens": self._config.max_tokens,
                 "system": system,
@@ -75,25 +72,49 @@ class BaseAgent(ABC):
             }
             if tools:
                 kwargs["tools"] = tools
-            return self._gatekeeper.execute(
-                self._client.messages.create, **kwargs
-            )
+            return self._gatekeeper.execute(self._client.messages.create, **kwargs)
 
+        executor = ThreadPoolExecutor(max_workers=1)
+        future = executor.submit(_request)
         try:
-            with ThreadPoolExecutor(max_workers=1) as executor:
-                future = executor.submit(_api_call)
-                response = future.result(timeout=self._config.llm_timeout)
+            result = future.result(timeout=self._config.llm_timeout)
+            executor.shutdown(wait=False)
+            return result
         except FuturesTimeoutError as exc:
+            executor.shutdown(wait=False)
             raise TimeoutError(f"{self.role.value} LLM call timed out") from exc
 
-        text_parts: list[str] = []
-        for block in response.content:
-            if block.type == "text":
-                text_parts.append(block.text)
-            elif block.type == "tool_use" and block.name == "search_web":
-                citations = self._search_tool.handle_tool_call(block.input)
+    def _call_llm(
+        self,
+        system: str,
+        messages: list[dict],
+        use_search: bool = False,
+    ) -> tuple[str, list[Citation]]:
+        """Call the LLM, handling the full tool-use cycle if the model calls search_web."""
+        tools = [SEARCH_TOOL_DEFINITION] if use_search else []
+        citations: list[Citation] = []
+        conversation = list(messages)
 
-        return "\n".join(text_parts), citations
+        while True:
+            response = self._call_api_once(system, conversation, tools)
+            if response.stop_reason == "tool_use":
+                # Execute all tool calls and build tool_result messages
+                tool_results = []
+                for block in response.content:
+                    if block.type == "tool_use" and block.name == "search_web":
+                        new_cites = self._search_tool.handle_tool_call(block.input)
+                        citations.extend(new_cites)
+                        tool_results.append({
+                            "type": "tool_result",
+                            "tool_use_id": block.id,
+                            "content": json.dumps([c.model_dump() for c in new_cites]),
+                        })
+                # Feed results back — LLM will then produce the final text response
+                conversation.append({"role": "assistant", "content": response.content})
+                conversation.append({"role": "user", "content": tool_results})
+            else:
+                text_parts = [b.text for b in response.content if b.type == "text"]
+                return "\n".join(text_parts), citations
 
     @abstractmethod
     def run(self) -> None:

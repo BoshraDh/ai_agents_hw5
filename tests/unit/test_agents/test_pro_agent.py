@@ -9,7 +9,7 @@ import pytest
 
 from debate.agents.pro_agent import ProAgent
 from debate.constants import AgentRole, MessageType
-from debate.models.messages import Citation, DebateMessage
+from debate.models.messages import Citation
 from debate.shared.gatekeeper import ApiGatekeeper
 from debate.shared.message_bus import MessageBus
 

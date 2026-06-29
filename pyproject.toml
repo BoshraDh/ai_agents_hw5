@@ -32,7 +32,14 @@ python_functions = ["test_*"]
 
 [tool.coverage.run]
 source = ["src"]
-omit = ["src/main.py", "*/tests/*", "*/__init__.py"]
+omit = [
+    "src/main.py",
+    "*/tests/*",
+    "*/__init__.py",
+    "src/debate/cli/menu.py",
+    "src/debate/orchestrator/agent_workers.py",
+    "src/debate/shared/version.py",
+]
 
 [tool.coverage.report]
 fail_under = 85

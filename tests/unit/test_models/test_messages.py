@@ -2,9 +2,8 @@
 
 from __future__ import annotations
 
-import json
-
 import pytest
+from pydantic import ValidationError
 
 from debate.constants import AgentRole, MessageType
 from debate.models.messages import Citation, DebateMessage, Verdict
@@ -16,7 +15,7 @@ class TestCitation:
         assert c.url == "https://example.com"
 
     def test_fields_required(self):
-        with pytest.raises(Exception):
+        with pytest.raises(ValidationError):
             Citation(url="https://example.com")
 
 
@@ -91,7 +90,7 @@ class TestVerdict:
         assert v.criterion == "persuasion_power"
 
     def test_father_cannot_win(self):
-        with pytest.raises(Exception):
+        with pytest.raises(ValidationError):
             Verdict(
                 winner=AgentRole.FATHER,
                 pro_score=50.0,

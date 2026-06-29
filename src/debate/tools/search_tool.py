@@ -2,8 +2,9 @@
 
 from __future__ import annotations
 
-from debate.models.messages import Citation
+from duckduckgo_search import DDGS
 
+from debate.models.messages import Citation
 
 SEARCH_TOOL_DEFINITION = {
     "name": "search_web",
@@ -39,7 +40,6 @@ class SearchTool:
     def search(self, query: str, max_results: int = 3) -> list[Citation]:
         """Search DuckDuckGo and return up to max_results Citation objects."""
         try:
-            from duckduckgo_search import DDGS
             with DDGS() as ddgs:
                 results = list(ddgs.text(query, max_results=min(max_results, 5)))
             return [

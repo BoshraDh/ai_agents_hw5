@@ -3,10 +3,7 @@
 from __future__ import annotations
 
 import json
-from pathlib import Path
 from unittest.mock import patch
-
-import pytest
 
 from debate.sdk.sdk import DebateSDK
 
@@ -38,8 +35,9 @@ def _mock_llm_factory(content: str, winner: str = "pro_agent"):
 class TestSDKSessionIsolation:
     """GAP-10: get_transcript and get_verdict must use session_id to look up the right data."""
 
-    def test_two_sessions_return_independent_data(self, tmp_path):
+    def test_two_sessions_return_independent_data(self, config, tmp_path):
         """Running two debates must not bleed data between session IDs."""
+        # config fixture writes JSON files to tmp_path/config; SDK points at same dir
         sdk = DebateSDK(str(tmp_path / "config"), use_processes=False)
 
         from debate.orchestrator.debate_orchestrator import DebateOrchestrator
@@ -76,7 +74,7 @@ class TestSDKSessionIsolation:
         assert any("Session A" in m["content"] for m in transcript_a)
         assert any("Session B" in m["content"] for m in transcript_b)
 
-    def test_unknown_session_returns_empty(self, tmp_path):
+    def test_unknown_session_returns_empty(self, config, tmp_path):
         sdk = DebateSDK(str(tmp_path / "config"), use_processes=False)
         assert sdk.get_transcript("nonexistent-id") == []
         assert sdk.get_verdict("nonexistent-id") is None

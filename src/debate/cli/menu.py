@@ -14,11 +14,13 @@ def _print_header() -> None:
     print(f"{'='*40}")
 
 
-def _menu_start(sdk: DebateSDK) -> None:
-    print(f"\nTopic: {sdk._config.topic}")
+def _menu_start(sdk: DebateSDK, state: dict) -> None:
+    cfg = sdk.get_config_summary()
+    print(f"\nTopic: {cfg['topic']}")
     print("Starting debate... (this may take a few minutes)")
     try:
         session_id = sdk.start_debate()
+        state["last_session_id"] = session_id
         print(f"\nDebate complete! Session: {session_id}")
         verdict = sdk.get_verdict(session_id)
         if verdict:
@@ -28,8 +30,9 @@ def _menu_start(sdk: DebateSDK) -> None:
         print(f"\nError: {exc}")
 
 
-def _menu_transcript(sdk: DebateSDK) -> None:
-    transcript = sdk.get_transcript("")
+def _menu_transcript(sdk: DebateSDK, state: dict) -> None:
+    sid = state.get("last_session_id", "")
+    transcript = sdk.get_transcript(sid)
     if not transcript:
         print("\nNo transcript available — run a debate first.")
         return
@@ -41,12 +44,13 @@ def _menu_transcript(sdk: DebateSDK) -> None:
             print(f"  Citations: {len(msg['citations'])} source(s)")
 
 
-def _menu_verdict(sdk: DebateSDK) -> None:
-    verdict = sdk.get_verdict("")
+def _menu_verdict(sdk: DebateSDK, state: dict) -> None:
+    sid = state.get("last_session_id", "")
+    verdict = sdk.get_verdict(sid)
     if not verdict:
         print("\nNo verdict yet — run a debate first.")
         return
-    print(f"\n--- Verdict ---")
+    print("\n--- Verdict ---")
     print(f"Winner:       {verdict['winner']}")
     print(f"Pro score:    {verdict['pro_score']:.1f}")
     print(f"Con score:    {verdict['con_score']:.1f}")
@@ -57,6 +61,7 @@ def _menu_verdict(sdk: DebateSDK) -> None:
 def run_menu() -> None:
     """Entry point for the interactive terminal menu."""
     sdk = DebateSDK()
+    state: dict = {"last_session_id": ""}
     while True:
         _print_header()
         print("1. Start new debate")
@@ -67,11 +72,11 @@ def run_menu() -> None:
         print("6. Exit")
         choice = input("\nEnter choice: ").strip()
         if choice == "1":
-            _menu_start(sdk)
+            _menu_start(sdk, state)
         elif choice == "2":
-            _menu_transcript(sdk)
+            _menu_transcript(sdk, state)
         elif choice == "3":
-            _menu_verdict(sdk)
+            _menu_verdict(sdk, state)
         elif choice == "4":
             topic = input("Enter new topic: ").strip()
             if topic:

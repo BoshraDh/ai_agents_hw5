@@ -4,31 +4,32 @@ from __future__ import annotations
 
 import threading
 import time
+import warnings
 from collections import deque
-from typing import Any, Callable
+from collections.abc import Callable
+from typing import Any
 
 from debate.shared.config import ConfigManager
 
 
-class BudgetExceededException(Exception):
+class BudgetExceededException(Exception):  # noqa: N818
     """Raised when cumulative spend exceeds budget_usd."""
 
 
-class ApiCallFailedException(Exception):
+class ApiCallFailedException(Exception):  # noqa: N818
     """Raised after max_retries exhausted without a successful response."""
 
 
-class RateLimitQueueFullException(Exception):
+class RateLimitQueueFullException(Exception):  # noqa: N818
     """GAP-7: raised when FIFO admission queue hits its hard cap."""
 
 
 class ApiGatekeeper:
     """Controls all Anthropic API calls: FIFO queue, concurrent_max, RPM+RPH, budget."""
 
-    MAX_QUEUE_SIZE = 50
-
     def __init__(self, config: ConfigManager) -> None:
         self._config = config
+        self._max_queue_size = config.max_queue_size
         # GAP-5: semaphore enforces concurrent_max in-flight calls
         self._concurrent_sem = threading.Semaphore(config.concurrent_max)
         # GAP-4: deque of Event tickets — FIFO admission queue
@@ -55,7 +56,7 @@ class ApiGatekeeper:
         # Obtain a FIFO ticket
         ticket = threading.Event()
         with self._fifo_lock:
-            if len(self._fifo) >= self.MAX_QUEUE_SIZE:
+            if len(self._fifo) >= self._max_queue_size:
                 raise RateLimitQueueFullException("Gatekeeper admission queue is full")
             self._fifo.append(ticket)
         ticket.wait()  # Block until dispatcher admits this request (FIFO order)
@@ -131,7 +132,6 @@ class ApiGatekeeper:
                 self._total_cost_usd += cost
                 if not self._alert_logged and self._total_cost_usd >= self._config.alert_at_usd:
                     self._alert_logged = True
-                    import warnings
                     warnings.warn(
                         f"[Gatekeeper] Budget alert: ${self._total_cost_usd:.4f} spent "
                         f"(alert threshold ${self._config.alert_at_usd:.2f})",

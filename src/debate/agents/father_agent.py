@@ -4,13 +4,12 @@ from __future__ import annotations
 
 import json
 
+from debate.agents.base_agent import BaseAgent
 from debate.constants import AgentRole, MessageType
 from debate.models.messages import DebateMessage, Verdict
 from debate.shared.config import ConfigManager
 from debate.shared.gatekeeper import ApiGatekeeper
 from debate.shared.message_bus import MessageBus
-from debate.agents.base_agent import BaseAgent
-
 
 _SYSTEM_PROMPT = """You are the Judge and Moderator of an AI debate on the topic: "{topic}"
 

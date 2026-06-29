@@ -45,7 +45,7 @@ class TestApiGatekeeperBasic:
     def test_queue_full_raises(self, config):
         gk = ApiGatekeeper(config)
         # Pre-fill the FIFO deque without setting any events
-        for _ in range(ApiGatekeeper.MAX_QUEUE_SIZE):
+        for _ in range(config.max_queue_size):
             gk._fifo.append(threading.Event())
         with pytest.raises(RateLimitQueueFullException):
             gk.execute(MagicMock(return_value=MagicMock(usage=None)))
@@ -76,9 +76,11 @@ class TestGatekeeperFifoOrdering:
 
         # All 5 must have completed
         assert len(order) == 5
-        # FIFO: order must be non-decreasing (threads admitted in arrival order)
-        # We can't guarantee exact order due to OS scheduling, but all must complete
-        assert sorted(order) == list(range(5))
+        # All five indices must be present — completeness check.
+        # Note: we cannot assert strict insertion order because OS scheduling
+        # determines which thread acquires _fifo_lock first; the queue is FIFO
+        # relative to insertion, not relative to thread spawn order.
+        assert set(order) == set(range(5))
 
 
 class TestConcurrentMax:

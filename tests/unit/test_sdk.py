@@ -5,8 +5,6 @@ from __future__ import annotations
 import json
 from unittest.mock import patch
 
-import pytest
-
 from debate.sdk.sdk import DebateSDK
 
 
@@ -22,7 +20,7 @@ def _mock_llm(content: str, winner: str = "pro_agent"):
     responses = [
         json.dumps({"content": content}),
         json.dumps({"content": f"Counter: {content}"}),
-    ] * 3 + [verdict]
+    ] * 2 + [verdict]
     counter = {"n": 0}
 
     def _call(system, messages, use_search=False):
@@ -34,7 +32,8 @@ def _mock_llm(content: str, winner: str = "pro_agent"):
 
 
 class TestDebateSDKInterface:
-    def test_start_debate_returns_string_session_id(self, tmp_path):
+    def test_start_debate_returns_string_session_id(self, config, tmp_path):
+        # config fixture writes files to tmp_path/config; SDK points at the same dir
         sdk = DebateSDK(str(tmp_path / "config"), use_processes=False)
         from debate.orchestrator.debate_orchestrator import DebateOrchestrator
         orch = DebateOrchestrator(str(tmp_path / "config"), use_processes=False)
@@ -49,7 +48,7 @@ class TestDebateSDKInterface:
         sdk._sessions[sid] = orch
         assert isinstance(sid, str) and len(sid) > 0
 
-    def test_get_transcript_returns_list(self, tmp_path):
+    def test_get_transcript_returns_list(self, config, tmp_path):
         sdk = DebateSDK(str(tmp_path / "config"), use_processes=False)
         from debate.orchestrator.debate_orchestrator import DebateOrchestrator
         orch = DebateOrchestrator(str(tmp_path / "config"), use_processes=False)
@@ -66,7 +65,7 @@ class TestDebateSDKInterface:
         assert isinstance(transcript, list)
         assert len(transcript) > 0
 
-    def test_get_verdict_returns_dict_with_winner(self, tmp_path):
+    def test_get_verdict_returns_dict_with_winner(self, config, tmp_path):
         sdk = DebateSDK(str(tmp_path / "config"), use_processes=False)
         from debate.orchestrator.debate_orchestrator import DebateOrchestrator
         orch = DebateOrchestrator(str(tmp_path / "config"), use_processes=False)
@@ -83,15 +82,44 @@ class TestDebateSDKInterface:
         assert verdict is not None
         assert "winner" in verdict
 
-    def test_get_transcript_unknown_session_returns_empty(self, tmp_path):
+    def test_get_transcript_unknown_session_returns_empty(self, config, tmp_path):
         sdk = DebateSDK(str(tmp_path / "config"), use_processes=False)
         assert sdk.get_transcript("no-such-id") == []
 
-    def test_get_verdict_unknown_session_returns_none(self, tmp_path):
+    def test_get_verdict_unknown_session_returns_none(self, config, tmp_path):
         sdk = DebateSDK(str(tmp_path / "config"), use_processes=False)
         assert sdk.get_verdict("no-such-id") is None
 
-    def test_get_status_returns_string(self, tmp_path):
+    def test_get_status_returns_string(self, config, tmp_path):
         sdk = DebateSDK(str(tmp_path / "config"), use_processes=False)
         status = sdk.get_status()
         assert isinstance(status, str)
+
+    def test_get_status_with_sessions(self, config, tmp_path):
+        from unittest.mock import MagicMock
+        from debate.constants import DebateStatus
+        sdk = DebateSDK(str(tmp_path / "config"), use_processes=False)
+        mock_orch = MagicMock()
+        mock_orch.status = DebateStatus.COMPLETED
+        sdk._sessions["sess-1"] = mock_orch
+        assert sdk.get_status() == DebateStatus.COMPLETED.value
+
+    def test_get_config_summary_has_required_keys(self, config, tmp_path):
+        sdk = DebateSDK(str(tmp_path / "config"), use_processes=False)
+        summary = sdk.get_config_summary()
+        assert "topic" in summary
+        assert "budget_usd" in summary
+        assert "max_rounds" in summary
+
+    def test_set_topic_updates_topic(self, config, tmp_path):
+        sdk = DebateSDK(str(tmp_path / "config"), use_processes=False)
+        sdk.set_topic("New topic for testing")
+        assert sdk.get_config_summary()["topic"] == "New topic for testing"
+
+    def test_stop_clears_sessions(self, config, tmp_path):
+        from unittest.mock import MagicMock
+        sdk = DebateSDK(str(tmp_path / "config"), use_processes=False)
+        mock_orch = MagicMock()
+        sdk._sessions["sess-1"] = mock_orch
+        sdk.stop()
+        assert len(sdk._sessions) == 0

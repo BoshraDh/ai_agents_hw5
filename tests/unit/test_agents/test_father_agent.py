@@ -3,13 +3,13 @@
 from __future__ import annotations
 
 import json
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 import pytest
 
 from debate.agents.father_agent import FatherAgent
 from debate.constants import AgentRole, MessageType
-from debate.models.messages import DebateMessage, Verdict
+from debate.models.messages import DebateMessage
 from debate.shared.gatekeeper import ApiGatekeeper
 from debate.shared.message_bus import MessageBus
 
@@ -60,6 +60,8 @@ class TestFatherAgent:
         assert verdict.winner == AgentRole.PRO
 
     def test_evaluate_invalid_json_raises(self, father, sample_pro_message):
-        with patch.object(father, "_call_llm", return_value=("not json", [])):
-            with pytest.raises(ValueError, match="invalid Verdict JSON"):
-                father.evaluate_debate([sample_pro_message])
+        with (
+            patch.object(father, "_call_llm", return_value=("not json", [])),
+            pytest.raises(ValueError, match="invalid Verdict JSON"),
+        ):
+            father.evaluate_debate([sample_pro_message])

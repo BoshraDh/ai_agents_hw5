@@ -3,11 +3,10 @@
 from __future__ import annotations
 
 from pathlib import Path
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 import pytest
 
-from debate.constants import AgentRole
 from debate.agents.base_agent import _SKILLS_DIR
 
 
@@ -40,8 +39,8 @@ class TestSkillLoading:
 
     def test_pro_and_con_skills_are_different(self, config):
         """Pro and Con skills must differ — same skill would defeat the debate purpose."""
-        from debate.agents.pro_agent import ProAgent
         from debate.agents.con_agent import ConAgent
+        from debate.agents.pro_agent import ProAgent
         from debate.shared.gatekeeper import ApiGatekeeper
         gk = ApiGatekeeper(config)
         pro = ProAgent(config, gk)
@@ -66,15 +65,18 @@ class TestSkillLoading:
 class TestBaseAgentTimeout:
     def test_llm_timeout_raises_timeout_error(self, config):
         """A slow LLM call that exceeds llm_timeout must raise TimeoutError."""
+        import time
+
         from debate.agents.pro_agent import ProAgent
         from debate.shared.gatekeeper import ApiGatekeeper
-        import time
 
         agent = ProAgent(config, ApiGatekeeper(config))
 
-        def slow_call(**kwargs):
+        def slow_call(*args, **kwargs):
             time.sleep(10)
 
-        with patch.object(agent._gatekeeper, "execute", side_effect=slow_call):
-            with pytest.raises(TimeoutError):
-                agent._call_llm("system", [{"role": "user", "content": "hi"}])
+        with (
+            patch.object(agent._gatekeeper, "execute", side_effect=slow_call),
+            pytest.raises(TimeoutError),
+        ):
+            agent._call_llm("system", [{"role": "user", "content": "hi"}])

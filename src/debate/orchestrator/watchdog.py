@@ -5,14 +5,14 @@ from __future__ import annotations
 import multiprocessing
 import threading
 import time
-from typing import Callable
+from collections.abc import Callable
 
 from debate.constants import AgentRole
 from debate.shared.config import ConfigManager
 from debate.shared.logger import DebateLogger
 
 
-class ProcessUnrecoverableException(Exception):
+class ProcessUnrecoverableException(Exception):  # noqa: N818
     """Raised when a process exceeds max_restarts_per_process."""
 
 
@@ -88,7 +88,7 @@ class Watchdog(threading.Thread):
             role=entry.role.value,
             attempt=entry.restart_count,
         )
-        if entry.restart_count > self._config.max_restarts:
+        if entry.restart_count >= self._config.max_restarts:
             self._running = False
             # GAP-3: signal via event instead of raising inside daemon thread
             self._fatal_error = ProcessUnrecoverableException(

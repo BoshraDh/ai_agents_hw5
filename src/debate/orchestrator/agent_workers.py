@@ -73,5 +73,7 @@ def run_father_worker(config_dir: str, task_q: Queue, result_q: Queue) -> None:
                 transcript = [DebateMessage.from_json(m) for m in task["transcript"]]
                 verdict = father.evaluate_debate(transcript)
                 result_q.put({"ok": True, "verdict": verdict.to_json()})
+            else:
+                result_q.put({"ok": False, "error": f"Unknown task type: {task.get('type')}"})
         except Exception as exc:
             result_q.put({"ok": False, "error": str(exc)})

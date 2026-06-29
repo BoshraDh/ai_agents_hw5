@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import contextlib
+
 from debate.constants import DebateStatus
 from debate.orchestrator.debate_orchestrator import DebateOrchestrator
 from debate.shared.config import ConfigManager
@@ -60,13 +62,11 @@ class DebateSDK:
 
     def set_topic(self, topic: str) -> None:
         """Update the debate topic in the active config."""
-        self._config._setup["debate"]["topic"] = topic
+        self._config.set_topic(topic)
 
     def stop(self) -> None:
         """Stop and clean up all session resources."""
         for orch in self._sessions.values():
-            try:
+            with contextlib.suppress(Exception):
                 orch.stop()
-            except Exception:
-                pass
         self._sessions.clear()

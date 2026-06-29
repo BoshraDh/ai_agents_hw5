@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import contextlib
 import multiprocessing
 import uuid
 from pathlib import Path
@@ -12,6 +13,7 @@ from debate.agents.pro_agent import ProAgent
 from debate.constants import DebateStatus
 from debate.models.messages import DebateMessage, Verdict
 from debate.orchestrator.agent_workers import run_con_worker, run_father_worker, run_pro_worker
+from debate.orchestrator.round_runner import get_verdict_via_process, run_round_via_processes
 from debate.orchestrator.watchdog import Watchdog
 from debate.shared.config import ConfigManager
 from debate.shared.gatekeeper import ApiGatekeeper
@@ -30,13 +32,11 @@ class DebateOrchestrator:
         self._transcript: list[DebateMessage] = []
         self._verdict: Verdict | None = None
         self._status = DebateStatus.IDLE
-        # In-process agents used for synchronous mode (tests / use_processes=False)
         _gk = ApiGatekeeper(self._config)
         self._pro = ProAgent(self._config, _gk, None)
         self._con = ConAgent(self._config, _gk, None)
         self._father = FatherAgent(self._config, _gk, None)
         self._watchdog: Watchdog | None = None
-        # Process queues — populated in _start_processes()
         self._pro_tq: multiprocessing.Queue = multiprocessing.Queue()
         self._pro_rq: multiprocessing.Queue = multiprocessing.Queue()
         self._con_tq: multiprocessing.Queue = multiprocessing.Queue()
@@ -50,7 +50,6 @@ class DebateOrchestrator:
         return self._session_id
 
     def get_session_id(self) -> str:
-        """GAP-11: explicit method matching PRD-E interface."""
         return self._session_id
 
     @property
@@ -60,7 +59,7 @@ class DebateOrchestrator:
     def run(self, topic: str | None = None) -> tuple[list[DebateMessage], Verdict]:
         """Run the full debate. Returns (transcript, verdict)."""
         if topic:
-            self._config._setup["debate"]["topic"] = topic
+            self._config.set_topic(topic)
         self._status = DebateStatus.RUNNING
         self._logger.info("DEBATE_START", topic=self._config.topic)
         try:
@@ -125,67 +124,35 @@ class DebateOrchestrator:
         for rnd in range(1, self._config.max_rounds + 1):
             self._logger.info("ROUND_START", round=rnd)
             if self._watchdog:
-                self._watchdog.check_for_fatal_error()  # GAP-3
-            pro_msg, con_msg = (
-                self._round_via_processes(rnd, prev_con)
-                if self._use_processes
-                else self._round_synchronous(rnd, prev_con)
-            )
+                self._watchdog.check_for_fatal_error()
+            if self._use_processes:
+                pro_msg, con_msg = run_round_via_processes(
+                    rnd, prev_con, self._config,
+                    self._pro_tq, self._pro_rq,
+                    self._con_tq, self._con_rq,
+                    self._fth_tq, self._fth_rq,
+                )
+            else:
+                pro_msg = self._pro.generate_argument(rnd, prev_con)
+                con_msg = self._con.generate_counter(rnd, pro_msg)
             self._transcript += [pro_msg, con_msg]
             prev_con = con_msg
             self._logger.info("ROUND_END", round=rnd)
-        verdict = self._get_verdict_from_father()
+        verdict = (
+            get_verdict_via_process(self._transcript, self._fth_tq, self._fth_rq)
+            if self._use_processes
+            else self._father.evaluate_debate(self._transcript)
+        )
         self._verdict = verdict
         return self._transcript, verdict
-
-    def _round_via_processes(
-        self, rnd: int, prev_con: DebateMessage | None
-    ) -> tuple[DebateMessage, DebateMessage]:
-        timeout = self._config.llm_timeout
-        self._pro_tq.put({"round": rnd, "prev": prev_con.to_json() if prev_con else None})
-        pro_resp = self._pro_rq.get(timeout=timeout)
-        if not pro_resp["ok"]:
-            raise RuntimeError(f"Pro agent error: {pro_resp['error']}")
-        pro_msg = DebateMessage.from_json(pro_resp["data"])
-        self._fth_tq.put({"type": "route", "message": pro_msg.to_json(), "dest": "con"})
-        self._fth_rq.get(timeout=30)
-        self._con_tq.put({"round": rnd, "pro_msg": pro_msg.to_json()})
-        con_resp = self._con_rq.get(timeout=timeout)
-        if not con_resp["ok"]:
-            raise RuntimeError(f"Con agent error: {con_resp['error']}")
-        con_msg = DebateMessage.from_json(con_resp["data"])
-        self._fth_tq.put({"type": "route", "message": con_msg.to_json(), "dest": "pro"})
-        self._fth_rq.get(timeout=30)
-        return pro_msg, con_msg
-
-    def _round_synchronous(
-        self, rnd: int, prev_con: DebateMessage | None
-    ) -> tuple[DebateMessage, DebateMessage]:
-        pro_msg = self._pro.generate_argument(rnd, prev_con)
-        con_msg = self._con.generate_counter(rnd, pro_msg)
-        return pro_msg, con_msg
-
-    def _get_verdict_from_father(self) -> Verdict:
-        if self._use_processes:
-            self._fth_tq.put({
-                "type": "evaluate",
-                "transcript": [m.to_json() for m in self._transcript],
-            })
-            resp = self._fth_rq.get(timeout=120)
-            if not resp["ok"]:
-                raise RuntimeError(f"Father evaluation error: {resp['error']}")
-            return Verdict.from_json(resp["verdict"])
-        return self._father.evaluate_debate(self._transcript)
 
     def stop(self) -> None:
         """GAP-11: gracefully stop all processes and Watchdog."""
         if self._watchdog:
             self._watchdog.stop()
         for q in (self._pro_tq, self._con_tq, self._fth_tq):
-            try:
+            with contextlib.suppress(Exception):
                 q.put_nowait(None)
-            except Exception:
-                pass
         for p in self._procs.values():
             p.join(timeout=5)
             if p.is_alive():

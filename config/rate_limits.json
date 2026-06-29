@@ -3,7 +3,8 @@
   "rate_limits": {
     "requests_per_minute": 30,
     "requests_per_hour": 500,
-    "concurrent_max": 3
+    "concurrent_max": 3,
+    "max_queue_size": 50
   },
   "retry": {
     "max_retries": 3,

@@ -2,9 +2,7 @@
 
 from __future__ import annotations
 
-from unittest.mock import MagicMock, patch
-
-import pytest
+from unittest.mock import patch
 
 from debate.models.messages import Citation
 from debate.tools.search_tool import SearchTool
@@ -17,8 +15,8 @@ class TestSearchTool:
             {"href": "https://example.com/1", "body": "AI helps doctors.", "title": "MedNews"},
             {"href": "https://example.com/2", "body": "AI improves crops.", "title": "AgriNews"},
         ]
-        with patch("debate.tools.search_tool.DDGS") as MockDDGS:
-            instance = MockDDGS.return_value.__enter__.return_value
+        with patch("debate.tools.search_tool.DDGS") as mock_ddgs:
+            instance = mock_ddgs.return_value.__enter__.return_value
             instance.text.return_value = mock_results
             results = tool.search("AI benefits", max_results=2)
 
