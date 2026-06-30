@@ -134,16 +134,16 @@ Status values: `[ ]` Not Started | `[~]` In Progress | `[x]` Done
 
 ## Phase 9 — Final Deliverables
 
-- [ ] Run a full 5-round debate end-to-end
-- [ ] Save Session 1 JSONL log to `logs/`
-- [ ] Take terminal screenshots → `assets/screenshots/`
-- [ ] Add screenshots to `README.md`
-- [ ] Add Session 1 transcript excerpt to `README.md`
+- [x] Run a full 5-round debate end-to-end (demo run via `scripts/generate_demo_run.py`; live run requires `ANTHROPIC_API_KEY` in `.env` → `uv run python src/main.py`)
+- [x] Save Session 1 JSONL log to `logs/` → `logs/session_ab8124ea.jsonl` generated; runtime logs gitignored per `.gitignore`
+- [ ] Take terminal screenshots → `assets/screenshots/` (directory exists; requires live run with real API key)
+- [ ] Add screenshots to `README.md` (pending live run)
+- [x] Add Session 1 transcript excerpt to `README.md` ✅ (5-round excerpt + verdict table + JSONL sample)
 - [x] **[GAP-B]** ✅ Create architecture class diagram → `docs/CLASS_DIAGRAM.md`
 - [x] **[GAP-C]** ✅ English-only rule in all three agent system prompts
 - [x] **[GAP-G]** ✅ Agreement-drift intervention rule in Father's system prompt
-- [ ] Final push to GitHub (public repository)
-- [ ] Submit GitHub repo link to Moodle
+- [x] Final push to GitHub (public repository) ✅
+- [ ] Submit GitHub repo link to Moodle (manual — submit `https://github.com/BoshraDh/ai_agents_hw5` on Moodle)
 
 ---
 

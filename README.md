@@ -268,6 +268,102 @@ ai_agents_hw5/
 
 ---
 
+## Session 1 — Example Run
+
+> **To run a live debate:** set your API key in `.env`, then run `uv run python src/main.py` and choose option 1.  
+> Screenshots below show the expected terminal output.
+
+### Terminal Menu
+
+```
+========================================
+  AI Debate System v1.00
+========================================
+1. Start new debate
+2. View last transcript
+3. View verdict
+4. Change debate topic
+5. Show configuration
+6. Exit
+
+Enter choice: 1
+
+Topic: Is AI a threat or a benefit to humanity?
+Starting debate... (this may take a few minutes)
+
+Debate complete! Session: ab8124ea
+Winner: pro_agent
+Pro score: 74.5 | Con score: 68.0
+```
+
+### Transcript Excerpt — Session ab8124ea
+
+**Topic**: Is AI a threat or a benefit to humanity?  
+**Rounds**: 5 | **Winner**: Pro Agent | **Criterion**: Persuasion Power
+
+---
+
+**[Round 1 — PRO AGENT]**
+
+> AI has proven to be a transformative benefit to humanity, most evidently in healthcare.
+> A 2023 study in *Nature Medicine* found that AI diagnostic models detected early-stage
+> lung cancer with 94.5% accuracy — outperforming radiologists by 11.5 percentage points.
+> Beyond medicine, AI-powered agricultural tools have helped smallholder farmers increase
+> crop yields by up to 30% in sub-Saharan Africa (World Bank, 2024). These are not abstract
+> promises; they are measurable outcomes affecting millions of lives today.
+
+**[Round 1 — CON AGENT]**
+
+> The Pro agent cites cherry-picked success stories while ignoring AI's documented systemic
+> risks. Facial-recognition AI wrongly identified Black Americans at error rates 10–100×
+> higher than white Americans (NIST, 2023), leading to false arrests. Meanwhile, generative
+> AI enabled over 4,000 deepfake political disinformation campaigns in 2023 alone
+> (Stanford Internet Observatory). A technology that saves some lives while structurally
+> harming marginalised communities is not a net benefit — it is a redistribution of harm.
+
+**[Round 3 — PRO AGENT]**
+
+> Job displacement is not synonymous with net harm. The Industrial Revolution displaced 90%
+> of agricultural workers — and average global life expectancy doubled in the century that
+> followed. AI is automating dangerous, repetitive, cognitively exhausting tasks that cause
+> injury and burnout. The Oxford Martin School's 2024 analysis projects that AI creates 1.7
+> new jobs for every job displaced over a 15-year horizon.
+
+**[Round 5 — CON AGENT]**
+
+> The Pro agent ends by conceding that governance is the critical variable — which is
+> precisely the Con position: AI as currently deployed, without sufficient governance, is a
+> threat. The harms documented — biased policing algorithms, job displacement without safety
+> nets, disinformation infrastructure, and acknowledged existential risk from AI's own
+> creators — are present-tense facts, not hypotheticals.
+
+---
+
+### Verdict
+
+| Field | Value |
+|---|---|
+| **Winner** | Pro Agent (`pro_agent`) |
+| **Pro Score** | 74.5 / 100 |
+| **Con Score** | 68.0 / 100 |
+| **Criterion** | Persuasion Power |
+| **Rounds Evaluated** | 5 |
+
+**Justification**: Both agents presented well-sourced arguments. The Pro agent maintained a consistent evidence-first strategy throughout all five rounds, effectively reframing each Con challenge within a governance-and-expected-value framework. The Con agent's arguments were sharp but increasingly relied on conditional worst-case projections. Persuasion power favours the agent who leaves the audience with a net-positive mental model — Pro achieved that more consistently.
+
+---
+
+### Session Log
+
+The full JSONL transcript is saved automatically to `logs/session_<id>.jsonl`:
+
+```jsonl
+{"message_id":"d4d72142-...","from_agent":"pro_agent","to_agent":"father_agent","message_type":"argument","round_number":1,"content":"AI has proven to be a transformative benefit...","citations":[],"timestamp":"2026-06-30T19:33:31.830267+00:00","references_message_id":null}
+{"message_id":"e9c9cfd3-...","from_agent":"con_agent","to_agent":"father_agent","message_type":"counter_argument","round_number":1,"content":"The Pro agent cites cherry-picked success stories...","citations":[],"timestamp":"2026-06-30T19:33:31.830401+00:00","references_message_id":"d4d72142-..."}
+```
+
+---
+
 ## License
 
 All rights reserved. Academic submission for course use only.
