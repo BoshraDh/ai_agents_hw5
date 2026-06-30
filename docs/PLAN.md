@@ -290,14 +290,19 @@ Every source file must stay ≤ 150 lines. Current status:
 
 | File | Lines | Status |
 |---|---|---|
-| `base_agent.py` | ~126 | ✅ |
-| `debate_orchestrator.py` | ~108 | ✅ (round logic extracted to `round_runner.py`) |
-| `round_runner.py` | ~61 | ✅ (new — extracted from orchestrator) |
-| `agent_workers.py` | ~80 | ✅ |
-| `gatekeeper.py` | ~141 | ✅ |
-| `config.py` | ~95 | ✅ |
+| `debate_orchestrator.py` | 146 | ✅ (process + watchdog init extracted to `round_runner.py`) |
+| `config.py` | 144 | ✅ |
+| `gatekeeper.py` | 141 | ✅ |
+| `base_agent.py` | 126 | ✅ |
+| `round_runner.py` | 119 | ✅ (round logic + process helpers) |
+| `watchdog.py` | 101 | ✅ |
+| `menu.py` | 92 | ✅ |
+| `pro_agent.py` | 86 | ✅ |
+| `messages.py` | 83 | ✅ |
+| `agent_workers.py` | 79 | ✅ |
+| `con_agent.py` | 79 | ✅ |
+| `father_agent.py` | 77 | ✅ |
+| `sdk.py` | 72 | ✅ |
+| All others | ≤67 | ✅ |
 
-Split rules:
-- `debate_orchestrator.py` → `round_runner.py` already done
-- `base_agent.py` → extract `_timeout_wrapper.py` mixin if it grows past 150
-- `gatekeeper.py` → extract `queue_manager.py` if needed
+All files verified ≤ 150 lines. No further splits needed.

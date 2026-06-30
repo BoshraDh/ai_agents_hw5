@@ -1,11 +1,16 @@
-"""Round execution helpers — extracted to keep debate_orchestrator.py under 150 lines."""
+"""Round execution and process-management helpers for the orchestrator."""
 
 from __future__ import annotations
 
 import multiprocessing
+from typing import TYPE_CHECKING
 
 from debate.models.messages import DebateMessage, Verdict
+from debate.orchestrator.agent_workers import run_con_worker, run_father_worker, run_pro_worker
 from debate.shared.config import ConfigManager
+
+if TYPE_CHECKING:
+    from debate.orchestrator.watchdog import Watchdog
 
 
 def run_round_via_processes(
@@ -58,3 +63,57 @@ def get_verdict_via_process(
     if not resp["ok"]:
         raise RuntimeError(f"Father evaluation error: {resp['error']}")
     return Verdict.from_json(resp["verdict"])
+
+
+def start_agent_processes(
+    config_dir: str,
+    pro_tq: multiprocessing.Queue,
+    pro_rq: multiprocessing.Queue,
+    con_tq: multiprocessing.Queue,
+    con_rq: multiprocessing.Queue,
+    fth_tq: multiprocessing.Queue,
+    fth_rq: multiprocessing.Queue,
+) -> dict:
+    """Spawn all three agent processes and return the procs dict."""
+    procs = {
+        "pro": multiprocessing.Process(
+            target=run_pro_worker, args=(config_dir, pro_tq, pro_rq), daemon=False
+        ),
+        "con": multiprocessing.Process(
+            target=run_con_worker, args=(config_dir, con_tq, con_rq), daemon=False
+        ),
+        "father": multiprocessing.Process(
+            target=run_father_worker, args=(config_dir, fth_tq, fth_rq), daemon=False
+        ),
+    }
+    for p in procs.values():
+        p.start()
+    return procs
+
+
+def register_agents_with_watchdog(
+    watchdog: Watchdog,
+    config_dir: str,
+    pro_role: object,
+    con_role: object,
+    father_role: object,
+    procs: dict,
+    queues: tuple,
+) -> None:
+    """Register all three agent processes with the Watchdog and start monitoring."""
+    pro_tq, pro_rq, con_tq, con_rq, fth_tq, fth_rq = queues
+    watchdog.register(
+        pro_role, procs["pro"],
+        lambda: multiprocessing.Process(target=run_pro_worker, args=(config_dir, pro_tq, pro_rq)),
+    )
+    watchdog.register(
+        con_role, procs["con"],
+        lambda: multiprocessing.Process(target=run_con_worker, args=(config_dir, con_tq, con_rq)),
+    )
+    watchdog.register(
+        father_role, procs["father"],
+        lambda: multiprocessing.Process(
+            target=run_father_worker, args=(config_dir, fth_tq, fth_rq)
+        ),
+    )
+    watchdog.start()

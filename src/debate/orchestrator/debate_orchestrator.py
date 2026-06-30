@@ -12,8 +12,12 @@ from debate.agents.father_agent import FatherAgent
 from debate.agents.pro_agent import ProAgent
 from debate.constants import DebateStatus
 from debate.models.messages import DebateMessage, Verdict
-from debate.orchestrator.agent_workers import run_con_worker, run_father_worker, run_pro_worker
-from debate.orchestrator.round_runner import get_verdict_via_process, run_round_via_processes
+from debate.orchestrator.round_runner import (
+    get_verdict_via_process,
+    register_agents_with_watchdog,
+    run_round_via_processes,
+    start_agent_processes,
+)
 from debate.orchestrator.watchdog import Watchdog
 from debate.shared.config import ConfigManager
 from debate.shared.gatekeeper import ApiGatekeeper
@@ -37,12 +41,11 @@ class DebateOrchestrator:
         self._con = ConAgent(self._config, _gk, None)
         self._father = FatherAgent(self._config, _gk, None)
         self._watchdog: Watchdog | None = None
-        self._pro_tq: multiprocessing.Queue = multiprocessing.Queue()
-        self._pro_rq: multiprocessing.Queue = multiprocessing.Queue()
-        self._con_tq: multiprocessing.Queue = multiprocessing.Queue()
-        self._con_rq: multiprocessing.Queue = multiprocessing.Queue()
-        self._fth_tq: multiprocessing.Queue = multiprocessing.Queue()
-        self._fth_rq: multiprocessing.Queue = multiprocessing.Queue()
+        (
+            self._pro_tq, self._pro_rq,
+            self._con_tq, self._con_rq,
+            self._fth_tq, self._fth_rq,
+        ) = [multiprocessing.Queue() for _ in range(6)]
         self._procs: dict[str, multiprocessing.Process] = {}
 
     @property
@@ -80,44 +83,21 @@ class DebateOrchestrator:
                 self.stop()
 
     def _start_processes(self) -> None:
-        """GAP-1: spawn each agent as an independent multiprocessing.Process."""
-        args = self._config_dir
-        self._procs = {
-            "pro": multiprocessing.Process(
-                target=run_pro_worker, args=(args, self._pro_tq, self._pro_rq), daemon=False
-            ),
-            "con": multiprocessing.Process(
-                target=run_con_worker, args=(args, self._con_tq, self._con_rq), daemon=False
-            ),
-            "father": multiprocessing.Process(
-                target=run_father_worker, args=(args, self._fth_tq, self._fth_rq), daemon=False
-            ),
-        }
-        for p in self._procs.values():
-            p.start()
+        self._procs = start_agent_processes(
+            self._config_dir,
+            self._pro_tq, self._pro_rq,
+            self._con_tq, self._con_rq,
+            self._fth_tq, self._fth_rq,
+        )
 
     def _start_watchdog(self) -> None:
-        """GAP-2: create Watchdog, register all 3 processes, start monitoring."""
         self._watchdog = Watchdog(self._config, self._logger)
-        self._watchdog.register(
-            self._pro.role, self._procs["pro"],
-            lambda: multiprocessing.Process(
-                target=run_pro_worker, args=(self._config_dir, self._pro_tq, self._pro_rq)
-            ),
+        register_agents_with_watchdog(
+            self._watchdog, self._config_dir,
+            self._pro.role, self._con.role, self._father.role,
+            self._procs,
+            (self._pro_tq, self._pro_rq, self._con_tq, self._con_rq, self._fth_tq, self._fth_rq),
         )
-        self._watchdog.register(
-            self._con.role, self._procs["con"],
-            lambda: multiprocessing.Process(
-                target=run_con_worker, args=(self._config_dir, self._con_tq, self._con_rq)
-            ),
-        )
-        self._watchdog.register(
-            self._father.role, self._procs["father"],
-            lambda: multiprocessing.Process(
-                target=run_father_worker, args=(self._config_dir, self._fth_tq, self._fth_rq)
-            ),
-        )
-        self._watchdog.start()
 
     def _run_rounds(self) -> tuple[list[DebateMessage], Verdict]:
         prev_con: DebateMessage | None = None
@@ -147,7 +127,7 @@ class DebateOrchestrator:
         return self._transcript, verdict
 
     def stop(self) -> None:
-        """GAP-11: gracefully stop all processes and Watchdog."""
+        """Gracefully stop all processes and Watchdog."""
         if self._watchdog:
             self._watchdog.stop()
         for q in (self._pro_tq, self._con_tq, self._fth_tq):
