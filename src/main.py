@@ -8,6 +8,10 @@ the menu recursively.
 
 import multiprocessing
 
+from dotenv import load_dotenv
+
+load_dotenv()  # loads ANTHROPIC_API_KEY from .env if present
+
 if __name__ == "__main__":
     multiprocessing.freeze_support()  # needed for frozen executables (PyInstaller etc.)
     from debate.cli.menu import run_menu
