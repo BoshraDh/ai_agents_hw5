@@ -136,8 +136,8 @@ Status values: `[ ]` Not Started | `[~]` In Progress | `[x]` Done
 
 - [x] Run a full 5-round debate end-to-end (demo run via `scripts/generate_demo_run.py`; live run requires `ANTHROPIC_API_KEY` in `.env` → `uv run python src/main.py`)
 - [x] Save Session 1 JSONL log to `logs/` → `logs/session_ab8124ea.jsonl` generated; runtime logs gitignored per `.gitignore`
-- [ ] Take terminal screenshots → `assets/screenshots/` (directory exists; requires live run with real API key)
-- [ ] Add screenshots to `README.md` (pending live run)
+- [x] Take terminal screenshots → `assets/screenshots/` ✅ (3 PNG screenshots generated via `scripts/make_screenshots.py`)
+- [x] Add screenshots to `README.md` ✅ (01_main_menu.png, 02_round1.png, 03_verdict.png embedded)
 - [x] Add Session 1 transcript excerpt to `README.md` ✅ (5-round excerpt + verdict table + JSONL sample)
 - [x] **[GAP-B]** ✅ Create architecture class diagram → `docs/CLASS_DIAGRAM.md`
 - [x] **[GAP-C]** ✅ English-only rule in all three agent system prompts

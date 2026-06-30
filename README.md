@@ -270,31 +270,19 @@ ai_agents_hw5/
 
 ## Session 1 — Example Run
 
-> **To run a live debate:** set your API key in `.env`, then run `uv run python src/main.py` and choose option 1.  
-> Screenshots below show the expected terminal output.
+> **To run a live debate:** set your API key in `.env`, then run `uv run python src/main.py` and choose option 1.
 
-### Terminal Menu
+### Screenshot 1 — Main Menu
 
-```
-========================================
-  AI Debate System v1.00
-========================================
-1. Start new debate
-2. View last transcript
-3. View verdict
-4. Change debate topic
-5. Show configuration
-6. Exit
+![Main menu](assets/screenshots/01_main_menu.png)
 
-Enter choice: 1
+### Screenshot 2 — Round 1 Transcript
 
-Topic: Is AI a threat or a benefit to humanity?
-Starting debate... (this may take a few minutes)
+![Round 1 transcript](assets/screenshots/02_round1.png)
 
-Debate complete! Session: ab8124ea
-Winner: pro_agent
-Pro score: 74.5 | Con score: 68.0
-```
+### Screenshot 3 — Final Verdict
+
+![Final verdict](assets/screenshots/03_verdict.png)
 
 ### Transcript Excerpt — Session ab8124ea
 
